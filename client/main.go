@@ -6,76 +6,86 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 )
 
-/*
-	Sumber : https://pkg.go.dev/net
-*/
+var wg sync.WaitGroup
 
 func main() {
 	conn, err := net.Dial("tcp", "localhost:8080")
 	if err != nil {
-		// handle error
-		panic(err)
+		fmt.Println("Failed to connect to server:", err)
+		return
 	}
-	// fmt.Fprintf(conn, "GET / HTTP/1.0\r\n\r\n")
 	defer conn.Close()
 
-	fmt.Println("Connected to server : ", conn.RemoteAddr())
-	// status, err := bufio.NewReader(conn).ReadString('\n')
+	fmt.Println("Connected to server:", conn.RemoteAddr())
 
-	go handleServerListen(conn)
+	// Handle incoming messages from server
+	go listenFromServer(conn)
 
 	scanner := bufio.NewScanner(os.Stdin)
 
-	fmt.Print("\nInput name : ")
+	fmt.Print("Input name: ")
 	scanner.Scan()
-	user := scanner.Text() + "\n"
-
-	conn.Write([]byte(user))
+	username := scanner.Text()
+	_, err = conn.Write([]byte(username + "\n"))
+	if err != nil {
+		fmt.Println("Failed to send name:", err)
+		return
+	}
 
 	for {
 
-		// fmt.Print("Type Message: ")
-		fmt.Print("Type Message: ") // reprint prompt
+		fmt.Print("> ")
 		scanner.Scan()
-		text := scanner.Text() + "\n"
+		text := scanner.Text()
 
-		if strings.Compare(text, "close") == 0 {
-			close(conn)
+		if strings.TrimSpace(text) == "close" {
+			fmt.Println("Closing connection...")
+			return
 		}
 
-		_, err := conn.Write([]byte(text))
+		_, err := conn.Write([]byte(text + "\n"))
 		if err != nil {
-			fmt.Println("Error sending message :", err)
+			fmt.Println("Error sending message:", err)
 			break
 		}
-
 	}
-
-	// fmt.Println(status)
-	// ...
 }
 
-func handleServerListen(conn net.Conn) {
+func listenFromServer(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 
 	for {
+		// Set a read deadline 1 second from now
+		// conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+
 		msg, err := reader.ReadString('\n')
-		splitted := strings.Split(msg, ":")
 		if err != nil {
-			fmt.Println(err)
-			continue
+			netErr, ok := err.(net.Error)
+			if ok && netErr.Timeout() {
+				// Timeout reached, no data
+				fmt.Print(">: ")
+				continue
+			} else {
+				// Real error or connection closed
+				fmt.Println("\nDisconnected from server.")
+				return
+			}
 		}
 
-		cName := splitted[0]
-		splitMsg := splitted[1]
+		msg = strings.TrimSpace(msg)
+		parts := strings.SplitN(msg, ":", 2)
 
-		fmt.Printf("\n[%s] : %s", cName, splitMsg)
-		fmt.Print("\nType Message: ") // reprint prompt
+		if len(parts) == 2 {
+			sender := strings.TrimSpace(parts[0])
+			content := strings.TrimSpace(parts[1])
+			fmt.Printf("%s: %s\n", sender, content)
+		} else {
+			fmt.Println(msg)
+		}
+
+		fmt.Print("> ")
 	}
-}
-
-func close(conn net.Conn) {
-	conn.Close()
 }
