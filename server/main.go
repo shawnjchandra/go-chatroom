@@ -14,7 +14,7 @@ var (
 	clients  = make(map[string]sm.User)
 	rooms    = make(map[string]sm.Room)
 	mu       sync.Mutex
-	mainMenu = "Menu: \n1. /all <msg>\n2. /rooms\n3. /create <nama room>\n4. /join <nama room>\n5. /menu\n"
+	mainMenu = "Menu: \n1. /all <msg>\n2. /rooms\n3. /create <nama room>\n4. /join <nama room>\n5. /menu\n6. /exit\n"
 	roomMenu = "[In-Room Menu]\n" +
 		"1. /chat <message>\n" +
 		"2. /list\n" +
@@ -53,23 +53,42 @@ func handleConnection(conn net.Conn) {
 
 	reader := bufio.NewReader(conn)
 
-	rawName, _ := reader.ReadString('\n')
+	//handle register
+	var user sm.User
+	var name string
 
-	name := strings.TrimSpace(rawName)
+	for {
+		rawName, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			return
+		}
 
-	user := sm.CreateUser(name, conn)
+		name = strings.TrimSpace(rawName)
 
-	mu.Lock()
-	if _, ok := clients[name]; !ok {
-		clients[name] = user
+		if name == "" {
+			conn.Write([]byte("Name can't be empty, try again\n"))
+		}
+
+		mu.Lock()
+		if _, ok := clients[name]; !ok {
+			user = sm.CreateUser(name, conn)
+			clients[name] = user
+			mu.Unlock()
+			break
+		} else {
+			mu.Unlock()
+			conn.Write([]byte("Username is already taken, try again\n"))
+			conn.Write([]byte("Input name :\n"))
+		}
+
+		fmt.Println("masih register")
 	}
-
-	mu.Unlock()
-
+	fmt.Println("lewat register")
+	// Log
 	fmt.Printf("[ %s ] Added user : %s\n", logTime(), name)
 
 	conn.Write([]byte("Welcome, " + name + "\n"))
-	// conn.Write([]byte("1. Chat to all\n2. Create Room\n3. Join Room\n4. Exit"))
 
 	// Nanti ganti deh wkwkwkwk ,jelek
 	conn.Write([]byte(mainMenu))
@@ -91,11 +110,11 @@ func handleConnection(conn net.Conn) {
 
 					if strings.Compare(cl.Name, user.Name) != 0 {
 						cl.SendMessage(user, msg)
-						fmt.Printf("[ %s | %s ] %s\n", logTime(), user.Name, msg)
 					}
 
 				}
 				mu.Unlock()
+				fmt.Printf("[ %s | %s ] %s\n", logTime(), user.Name, msg)
 			} else if strings.HasPrefix(trimmedInp, "/rooms") {
 				count := len(rooms)
 				if count == 0 {
@@ -166,11 +185,20 @@ func handleConnection(conn net.Conn) {
 					conn.Write([]byte(res))
 					fmt.Printf("[%s | %s ] %s", logTime(), user.Name, res)
 
-				} else if strings.HasPrefix(trimmedInp, "/menu") {
-					conn.Write([]byte(mainMenu))
 				} else {
 					conn.Write([]byte("The room you're searching for.. doesn't exist\n"))
 				}
+			} else if strings.HasPrefix(trimmedInp, "/exit") {
+				delete(clients, user.Name)
+
+				for _, cl := range clients {
+					cl.SendNotification(fmt.Sprintf("%s has left the server", user.Name))
+				}
+
+				// user.CloseConnection()
+				return
+			} else if strings.HasPrefix(trimmedInp, "/menu") {
+				conn.Write([]byte(mainMenu))
 			} else {
 				conn.Write([]byte("Unknown command.\n"))
 				conn.Write([]byte(mainMenu))
@@ -228,6 +256,10 @@ func handleConnection(conn net.Conn) {
 
 	}
 }
+
+// func handleRegister(reader bufio.Reader, conn net.Conn) string {
+
+// }
 
 func logTime() string {
 	t := time.Now()
