@@ -12,14 +12,14 @@ import (
 var wg sync.WaitGroup
 
 func main() {
-	conn, err := net.Dial("tcp", "localhost:8080")
+	conn, err := net.Dial("tcp", "localhost:39563")
 	if err != nil {
 		fmt.Println("Failed to connect to server:", err)
 		return
 	}
 	defer conn.Close()
 
-	fmt.Println("Connected to server:", conn.RemoteAddr())
+	fmt.Println("===== Connected to server =====")
 
 	// Handle incoming messages from server
 	go listenFromServer(conn)
@@ -76,15 +76,17 @@ func listenFromServer(conn net.Conn) {
 		}
 
 		msg = strings.TrimSpace(msg)
-		parts := strings.SplitN(msg, ":", 2)
 
-		if len(parts) == 2 {
-			sender := strings.TrimSpace(parts[0])
-			content := strings.TrimSpace(parts[1])
-			fmt.Printf("%s: %s\n", sender, content)
-		} else {
-			fmt.Println(msg)
-		}
+		fmt.Println(msg)
+		// parts := strings.SplitN(msg, ":", 2)
+
+		// if len(parts) == 2 {
+		// 	sender := strings.TrimSpace(parts[0])
+		// 	content := strings.TrimSpace(parts[1])
+		// 	fmt.Printf("%s: %s\n", sender, content)
+		// } else {
+		// 	fmt.Println(msg)
+		// }
 
 		fmt.Print("> ")
 	}
