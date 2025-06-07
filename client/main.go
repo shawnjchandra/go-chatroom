@@ -21,12 +21,11 @@ func main() {
 
 	fmt.Println("===== Connected to server =====")
 
-	// Handle incoming messages from server
 	go listenFromServer(conn)
 
 	scanner := bufio.NewScanner(os.Stdin)
 
-	fmt.Print("Input name: ")
+	fmt.Print("Input name : ")
 	scanner.Scan()
 	username := scanner.Text()
 	_, err = conn.Write([]byte(username + "\n"))
