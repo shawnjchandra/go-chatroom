@@ -81,7 +81,9 @@ func (r *Room) JoinRoom(user User) error {
 }
 
 func (r *Room) LeaveRoom(user User) {
-	r.NotificationToAll(fmt.Sprintf("%s has left the room %s", user.Name, r.Room_name))
+	notif := fmt.Sprintf("%s has left the room %s", user.Name, r.Room_name)
+	r.NotificationToAll(notif)
+	fmt.Printf(notif + "\n")
 
 	mu.Lock()
 
