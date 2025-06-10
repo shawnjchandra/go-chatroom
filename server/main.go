@@ -40,6 +40,7 @@ func main() {
 		conn, err := ln.Accept()
 		if err != nil {
 			// handle error
+			fmt.Println(err)
 		}
 
 		fmt.Printf("[ %s ] New Connection has been established\n", logTime())
@@ -68,27 +69,33 @@ func handleConnection(conn net.Conn) {
 
 		if name == "" {
 			conn.Write([]byte("Name can't be empty, try again\n"))
-		}
-
-		mu.Lock()
-		if _, ok := clients[name]; !ok {
-			user = sm.CreateUser(name, conn)
-			clients[name] = user
-			mu.Unlock()
-			break
 		} else {
-			mu.Unlock()
-			conn.Write([]byte("Username is already taken, try again\n"))
-			conn.Write([]byte("Input name :\n"))
-		}
 
-		fmt.Println("masih register")
+			mu.Lock()
+			if _, ok := clients[name]; !ok {
+				user = sm.CreateUser(name, conn)
+				clients[name] = user
+				mu.Unlock()
+				break
+			} else {
+				mu.Unlock()
+				conn.Write([]byte("Username is already taken, try again\n"))
+			}
+		}
+		conn.Write([]byte("Input name :\n"))
+
 	}
-	fmt.Println("lewat register")
+
 	// Log
 	fmt.Printf("[ %s ] Added user : %s\n", logTime(), name)
 
 	conn.Write([]byte("Welcome, " + name + "\n"))
+
+	for _, client := range clients {
+		if strings.Compare(client.Name, user.Name) != 0 {
+			client.SendNotification(fmt.Sprintf("%s has joined the server", user.Name))
+		}
+	}
 
 	// Nanti ganti deh wkwkwkwk ,jelek
 	conn.Write([]byte(mainMenu))
@@ -96,15 +103,31 @@ func handleConnection(conn net.Conn) {
 	for {
 		inp, err := reader.ReadString('\n')
 		if err != nil {
-			panic(err)
+			res := fmt.Sprintf("%s has forcibly closed the connection\n", user.Name)
+
+			fmt.Printf("[ %s ] %s", logTime(), res)
+			mu.Lock()
+			delete(clients, user.Name)
+			for _, cl := range clients {
+				cl.SendNotification(res)
+			}
+			mu.Unlock()
+
+			return
 		}
 
 		trimmedInp := strings.TrimSpace(inp)
 
 		if !user.IsInsideRoom {
-
+			// fmt.Println(trimmedInp)
 			if strings.HasPrefix(trimmedInp, "/all") {
-				msg := strings.TrimSpace(strings.SplitN(trimmedInp, " ", 2)[1])
+				content := strings.SplitN(trimmedInp, " ", 2)
+				if len(content) <= 1 {
+					user.SendNotification("You seem to forgot to write the message...?")
+					continue
+				}
+
+				msg := strings.TrimSpace(content[1])
 				mu.Lock()
 				for _, cl := range clients {
 
@@ -131,7 +154,13 @@ func handleConnection(conn net.Conn) {
 
 				}
 			} else if strings.HasPrefix(trimmedInp, "/create") {
-				room_name := strings.TrimSpace(strings.SplitN(trimmedInp, " ", 2)[1])
+				content := strings.SplitN(trimmedInp, " ", 2)
+				if len(content) <= 1 {
+					user.SendNotification("You can't make a <blank> room")
+					continue
+				}
+
+				room_name := strings.TrimSpace(content[1])
 
 				var ok bool
 
@@ -156,7 +185,7 @@ func handleConnection(conn net.Conn) {
 					res := fmt.Sprint("Create and join room " + room_name + "\n")
 
 					conn.Write([]byte(res))
-					fmt.Printf("[ %s | %s ] %sx", logTime(), user.Name, res)
+					fmt.Printf("[ %s | %s ] %s", logTime(), user.Name, res)
 
 				} else {
 					res := "Failed to create room\n"
@@ -166,11 +195,18 @@ func handleConnection(conn net.Conn) {
 
 				}
 			} else if strings.HasPrefix(trimmedInp, "/join") {
-				room_name := strings.TrimSpace(strings.SplitN(trimmedInp, " ", 2)[1])
+				content := strings.SplitN(trimmedInp, " ", 2)
+				if len(content) <= 1 {
+					user.SendNotification("Hey what's the name...?")
+					continue
+				}
+
+				room_name := strings.TrimSpace(content[1])
 				// fmt.Println("test", room_name)
 
+				mu.Lock()
 				if r, ok := rooms[room_name]; ok {
-
+					mu.Unlock()
 					// mu.Lock()
 					// r.JoinRoom(user)
 					// mu.Unlock()
@@ -180,21 +216,27 @@ func handleConnection(conn net.Conn) {
 
 					user.CurrentRoom.Join <- user
 
-					res := fmt.Sprintf("You have joined %s\n", room_name)
+					res := fmt.Sprintf("%s have joined %s\n", user.Name, room_name)
 
 					conn.Write([]byte(res))
-					fmt.Printf("[%s | %s ] %s", logTime(), user.Name, res)
+					fmt.Printf("[%s | %s ] %s\n", logTime(), user.Name, res)
 
 				} else {
+					mu.Unlock()
 					conn.Write([]byte("The room you're searching for.. doesn't exist\n"))
 				}
 			} else if strings.HasPrefix(trimmedInp, "/exit") {
+				res := fmt.Sprintf("%s has left the server\n", user.Name)
+
+				mu.Lock()
 				delete(clients, user.Name)
 
 				for _, cl := range clients {
-					cl.SendNotification(fmt.Sprintf("%s has left the server", user.Name))
+					cl.SendNotification(res)
 				}
+				mu.Unlock()
 
+				fmt.Printf("[ %s | %s ] %s", logTime(), user.Name, res)
 				// user.CloseConnection()
 				return
 			} else if strings.HasPrefix(trimmedInp, "/menu") {
@@ -210,7 +252,7 @@ func handleConnection(conn net.Conn) {
 		}
 
 		if user.IsInsideRoom {
-			fmt.Println("in a room")
+
 			// conn.Write([]byte(roomMenu))
 			for {
 
@@ -237,6 +279,7 @@ func handleConnection(conn net.Conn) {
 				} else if strings.HasPrefix(trimmedInp, "/list") {
 					usersInRoom := user.CurrentRoom.Users
 
+					conn.Write([]byte(fmt.Sprint("=== Active User in the room ===\n")))
 					mu.Lock()
 					for _, user := range usersInRoom {
 						conn.Write([]byte(fmt.Sprintf("%s\n", user.Name)))
@@ -257,13 +300,9 @@ func handleConnection(conn net.Conn) {
 	}
 }
 
-// func handleRegister(reader bufio.Reader, conn net.Conn) string {
-
-// }
-
 func logTime() string {
 	t := time.Now()
-	formatted := fmt.Sprintf("%d-%02d-%02d %02d:%02d:%02d:%02d",
+	formatted := fmt.Sprintf("%d-%02d-%02d %02d:%02d:%02d:%04d",
 		t.Year(), t.Month(), t.Day(),
 		t.Hour(), t.Minute(), t.Second(), t.Nanosecond())
 

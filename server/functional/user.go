@@ -60,19 +60,19 @@ func (u User) ReceiveMessage() (string, error) {
 
 func (u User) SendMessage(from User, msg string) {
 
-	wrapped := fmt.Sprintf("[FROM | %s] : %s\n", from.Name, msg)
+	wrapped := fmt.Sprintf("[ FROM | %s ] : %s\n", from.Name, msg)
 	u.Conn.Write([]byte(wrapped))
 }
 
 func (u User) SendMessageInRoom(from User, room_name, msg string) {
 
-	wrapped := fmt.Sprintf("[FROM | %s - %s] : %s\n", room_name, from.Name, msg)
+	wrapped := fmt.Sprintf("[ FROM | %s - %s ] : %s\n", room_name, from.Name, msg)
 	u.Conn.Write([]byte(wrapped))
 }
 
 func (u User) SendNotification(msg string) {
 
-	wrapped := fmt.Sprintf("[FROM | SERVER] : %s\n", msg)
+	wrapped := fmt.Sprintf("[ FROM | SERVER ] : %s\n", msg)
 	u.Conn.Write([]byte(wrapped))
 
 }
