@@ -8,7 +8,7 @@ import (
 )
 
 /*
-	Khusus Attribute channel pada struct mengambil inspirasi dari :
+	Khusus penggunaan attribute channel pada struct mengambil inspirasi dari :
 	- claude.ai
 */
 
@@ -66,10 +66,6 @@ func (r *Room) JoinRoom(user User) error {
 	if _, ok := r.Users[user.Name]; !ok {
 		r.Users[user.Name] = user
 
-		// count := user.Counter
-		// user.ListRoom[count] = r.Room_name
-		// r.Join <- user
-
 		r.NotificationToAll(fmt.Sprintf("%s has joined the room %s", user.Name, r.Room_name))
 
 		user.Counter++
@@ -91,7 +87,6 @@ func (r *Room) LeaveRoom(user User) {
 
 	mu.Unlock()
 
-	// user.IsInsideRoom = false
 }
 
 func (r *Room) DeleteRoom() {
@@ -105,7 +100,7 @@ func (r *Room) DeleteRoom() {
 }
 
 func (r *Room) MessageToAll(from User, msg string) {
-	// room := rooms[room_id]
+
 	mu.Lock()
 	for _, user := range r.Users {
 		user.SendMessageInRoom(from, r.Room_name, msg)
@@ -113,7 +108,7 @@ func (r *Room) MessageToAll(from User, msg string) {
 	mu.Unlock()
 }
 func (r *Room) NotificationToAll(msg string) {
-	// room := rooms[room_id]
+
 	mu.Lock()
 	for _, user := range r.Users {
 		user.SendNotification(msg)
@@ -123,44 +118,17 @@ func (r *Room) NotificationToAll(msg string) {
 
 func (r *Room) handleChat(message Message) {
 	rawMessage := message.Msg
-	// sender := message.User
 
 	content := strings.SplitN(rawMessage, " ", 2)
-	// cmd := strings.TrimSpace(content[0])
-
-	// switch {
-	// case cmd == "/chat":
 
 	msg := strings.TrimSpace(content[1])
-	// r.MessageToAll(message.User, msg)
+
 	mu.Lock()
 	for _, user := range r.Users {
 
-		// if strings.Compare(user.Name, sender.Name) != 0 {
 		user.SendMessageInRoom(message.User, r.Room_name, msg)
 
-		// }
 	}
 	mu.Unlock()
-	// message.User.SendNotification(menu)
 
-	// case cmd == "/list":
-	// 	var members string
-	// 	mu.Lock()
-	// 	for name, _ := range r.Users {
-	// 		members += fmt.Sprintf("- %s\n", name)
-	// 	}
-	// 	mu.Unlock()
-	// 	// message.User.SendNotification(menu)
-	// case cmd == "/leave":
-	// 	message.User.CurrentRoom = nil
-	// 	message.User.IsInsideRoom = false
-
-	// 	r.Leave <- message.User
-
-	// default:
-	// 	message.User.SendNotification("Unknown Command")
-	// 	// message.User.SendNotification(menu)
-
-	// }
 }

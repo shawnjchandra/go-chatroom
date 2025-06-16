@@ -30,12 +30,6 @@ func CreateUser(name string, conn net.Conn) User {
 
 func (u User) CloseConnection() {
 	u.Conn.Close()
-	// if err != nil {
-	// 	return fmt.Sprintf("%s Connection closed\n", u.Name)
-	// } else {
-	// 	return fmt.Sprintf("Failed to close connection for %s\n", u.Name)
-
-	// }
 
 }
 
@@ -50,12 +44,6 @@ func (u User) ReceiveMessage() (string, error) {
 
 	return msg, nil
 
-	// for cName, Conn := range clients {
-	// 	if strings.Compare(cName, Name) != 0 {
-	// 		Conn.Write([]byte(cName + ":" + msg))
-
-	// 	}
-	// }
 }
 
 func (u User) SendMessage(from User, msg string) {

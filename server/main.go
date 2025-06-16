@@ -86,7 +86,6 @@ func handleConnection(conn net.Conn) {
 
 	}
 
-	// Log
 	fmt.Printf("[ %s ] Added user : %s\n", logTime(), name)
 
 	conn.Write([]byte("Welcome, " + name + "\n"))
@@ -97,7 +96,6 @@ func handleConnection(conn net.Conn) {
 		}
 	}
 
-	// Nanti ganti deh wkwkwkwk ,jelek
 	conn.Write([]byte(mainMenu))
 
 	for {
@@ -119,7 +117,7 @@ func handleConnection(conn net.Conn) {
 		trimmedInp := strings.TrimSpace(inp)
 
 		if !user.IsInsideRoom {
-			// fmt.Println(trimmedInp)
+
 			if strings.HasPrefix(trimmedInp, "/all") {
 				content := strings.SplitN(trimmedInp, " ", 2)
 				if len(content) <= 1 {
@@ -202,14 +200,10 @@ func handleConnection(conn net.Conn) {
 				}
 
 				room_name := strings.TrimSpace(content[1])
-				// fmt.Println("test", room_name)
 
 				mu.Lock()
 				if r, ok := rooms[room_name]; ok {
 					mu.Unlock()
-					// mu.Lock()
-					// r.JoinRoom(user)
-					// mu.Unlock()
 
 					user.IsInsideRoom = true
 					user.CurrentRoom = &r
@@ -237,7 +231,7 @@ func handleConnection(conn net.Conn) {
 				mu.Unlock()
 
 				fmt.Printf("[ %s | %s ] %s", logTime(), user.Name, res)
-				// user.CloseConnection()
+
 				return
 			} else if strings.HasPrefix(trimmedInp, "/menu") {
 				conn.Write([]byte(mainMenu))
@@ -247,13 +241,10 @@ func handleConnection(conn net.Conn) {
 
 			}
 
-			// conn.Write([]byte("Menu: \n1. /all <msg>\n2. /list_room\n3. /create <nama room>\n4. /join <nama room>\n"))
-
 		}
 
 		if user.IsInsideRoom {
 
-			// conn.Write([]byte(roomMenu))
 			for {
 
 				inp, err := reader.ReadString('\n')
