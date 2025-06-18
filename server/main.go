@@ -134,10 +134,10 @@ func handleConnection(conn net.Conn) {
 		// Trim input dari whitespace
 		trimmedInp := strings.TrimSpace(inp)
 
-		// Cek kalau user ada di dalam room atau tidka
+		// Cek kalau user ada di dalam room atau tidak
 		/*
-			Kalau ya, pakai menu global
-			Kalau tidak ,pakai menu room
+			Kalau tidak, pakai menu global
+			Kalau ya ,pakai menu room
 		*/
 		if !user.IsInsideRoom {
 
@@ -339,17 +339,15 @@ func handleConnection(conn net.Conn) {
 					user.CurrentRoom.Leave <- user
 
 					fmt.Printf("[ %s | %s ] %s", logTime(), user.Name, res)
-					conn.Write([]byte(roomMenu))
+					conn.Write([]byte(mainMenu))
 					break
 				} else if strings.HasPrefix(trimmedInp, "/list") {
 					// Ambil semua user di room
-					usersInRoom := user.CurrentRoom.Users
-
 					conn.Write([]byte(fmt.Sprint("=== Active User in the room ===\n")))
 
 					// Lock dan ambil semua nama users, lalu di print send ke user
 					mu.Lock()
-					for _, user := range usersInRoom {
+					for _, user := range user.CurrentRoom.Users {
 						conn.Write([]byte(fmt.Sprintf("%s\n", user.Name)))
 					}
 					mu.Unlock()

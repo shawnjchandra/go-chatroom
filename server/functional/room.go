@@ -125,12 +125,6 @@ func (r *Room) handleChat(message Message) {
 	msg := strings.TrimSpace(content[1])
 
 	// Lock, send message, unlock
-	mu.Lock()
-	for _, user := range r.Users {
-
-		user.SendMessageInRoom(message.User, r.Room_name, msg)
-
-	}
-	mu.Unlock()
+	r.MessageToAll(message.User, msg)
 
 }
